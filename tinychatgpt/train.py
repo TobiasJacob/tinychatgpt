@@ -41,18 +41,18 @@ get_batch(train, 32, 10)
 
 # Define ngram model
 # train the model
-seq_len = 64
-batch_size = 32
-n_blocks = 8
-n_embed = 512
-model = MultiHeadAttentionModel(N_TOKENS, n_embed, n_blocks, seq_len, dropout=0.2, n_heads=8)
+seq_len = 128
+batch_size = 64
+n_blocks = 6
+n_embed = 384
+model = MultiHeadAttentionModel(N_TOKENS, n_embed, n_blocks, seq_len, dropout=0.2, n_heads=6)
 print("Model has {} parameters".format(sum(p.numel() for p in model.parameters())))
 model = model.to(device)
 optimizer = torch.optim.Adam(model.parameters(), lr=3e-4)
 losses_train = []
 losses_test = []
 trains_per_test = 4
-for i in tqdm(range(2000)):
+for i in tqdm(range(1000)):
     split = train if i % trains_per_test != 0 else test
     batch = get_batch(split, batch_size, seq_len + 1)
     if split is train:
