@@ -2,6 +2,7 @@
 import random
 import torch
 import matplotlib.pyplot as plt
+from tqdm import tqdm
 
 import sys
 from tinychatgpt.models.MultiHeadAttentionModel import MultiHeadAttentionModel
@@ -40,23 +41,32 @@ get_batch(train, 32, 10)
 
 # Define ngram model
 # train the model
-seq_len = 16
+seq_len = 64
 batch_size = 32
-model = MultiHeadAttentionModel(N_TOKENS, 256, seq_len)
+n_blocks = 8
+n_embed = 512
+model = MultiHeadAttentionModel(N_TOKENS, n_embed, n_blocks, seq_len, dropout=0.2, n_heads=8)
+print("Model has {} parameters".format(sum(p.numel() for p in model.parameters())))
 model = model.to(device)
-optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
+optimizer = torch.optim.Adam(model.parameters(), lr=3e-4)
 losses_train = []
 losses_test = []
-for i in range(600):
-    for split in [train, test]:
-        batch = get_batch(split, batch_size, seq_len + 1)
-        loss = model(batch[:, :-1], batch[:, 1:])
-        if split is train:
-            losses_train.append(loss.item())
-            optimizer.zero_grad()
-            loss.backward()
-            optimizer.step()
-        else:
+trains_per_test = 4
+for i in tqdm(range(2000)):
+    split = train if i % trains_per_test != 0 else test
+    batch = get_batch(split, batch_size, seq_len + 1)
+    if split is train:
+        model.train()
+    else:
+        model.eval()
+    loss = model(batch[:, :-1], batch[:, 1:])
+    if split is train:
+        losses_train.append(loss.item())
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+    else:
+        for _ in range(trains_per_test - 1):
             losses_test.append(loss.item())
     if i % 100 == 1:
         print(f"Loss train: {losses_train[-1]} Loss test: {losses_test[-1]}")
@@ -67,6 +77,7 @@ plt.show()
 
 # generate text
 batch = get_batch(test, 1, seq_len)
+model.eval()
 print(decode(model.generate(batch, 1000).squeeze().tolist()))
 
 # %%

@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 class MultiHeadAttentionBlock(nn.Module):
-    def __init__(self, head_size: int, max_seq_length: int, n_heads: int) -> None:
+    def __init__(self, head_size: int, max_seq_length: int, n_heads: int, dropout: float) -> None:
         super().__init__()
         self.n_heads = n_heads
         self.head_size = head_size
@@ -11,6 +11,8 @@ class MultiHeadAttentionBlock(nn.Module):
         self.query = nn.Linear(head_size, head_size)
         self.value = nn.Linear(head_size, head_size)
         self.register_buffer("mask", torch.triu(torch.ones(max_seq_length, max_seq_length).bool(), diagonal=1))
+        self.proj = nn.Linear(head_size, head_size)
+        self.dropout = nn.Dropout(dropout)
         
     def forward(self, x, mask=None) -> None:
         # x.shape = (batch_size, seq_len, head_size)
@@ -29,5 +31,7 @@ class MultiHeadAttentionBlock(nn.Module):
         # out.shape = (batch_size, seq_len, n_heads, single_head_size)
         out = out.reshape(B, T, self.head_size)
         # out.shape = (batch_size, seq_len, head_size)
+        out = self.proj(out)
+        out = self.dropout(out)
         return out
 
