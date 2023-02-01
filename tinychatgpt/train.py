@@ -1,4 +1,5 @@
 #%%
+import os
 import random
 import torch
 import matplotlib.pyplot as plt
@@ -48,11 +49,12 @@ n_embed = 384
 model = MultiHeadAttentionModel(N_TOKENS, n_embed, n_blocks, seq_len, dropout=0.2, n_heads=6)
 print("Model has {} parameters".format(sum(p.numel() for p in model.parameters())))
 model = model.to(device)
-optimizer = torch.optim.Adam(model.parameters(), lr=3e-4)
+optimizer = torch.optim.Adam(model.parameters(), lr=2e-4)
 losses_train = []
 losses_test = []
 trains_per_test = 4
-for i in tqdm(range(1000)):
+os.makedirs("models", exist_ok=True)
+for i in tqdm(range(5000)):
     split = train if i % trains_per_test != 0 else test
     batch = get_batch(split, batch_size, seq_len + 1)
     if split is train:
@@ -70,6 +72,7 @@ for i in tqdm(range(1000)):
             losses_test.append(loss.item())
     if i % 100 == 1:
         print(f"Loss train: {losses_train[-1]} Loss test: {losses_test[-1]}")
+        torch.save(model.state_dict(), f"models/model{i}.pt")
 plt.plot(losses_train)
 plt.plot(losses_test)
 plt.show()
