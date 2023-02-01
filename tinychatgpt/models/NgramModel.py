@@ -13,7 +13,8 @@ class NgramModel(nn.Module):
 
     def forward(self, x, y=None):
         # x.shape = (batch_size, seq_len)
-        x = self.encoder(x)
+        # y.shape = (batch_size, seq_len)
+        x = self.encoder(x[:, :-1])
         # x.shape = (batch_size, seq_len, n_embed)
         x = x.view(x.shape[0], -1)
         # x.shape = (batch_size, seq_len * n_embed)
@@ -22,7 +23,7 @@ class NgramModel(nn.Module):
         x = self.fc3(x)
         # x.shape = (batch_size, n_tokens)
         if y is not None:
-            return F.cross_entropy(x, y)
+            return F.cross_entropy(x, y[:, -1])
         return x
 
     def generate(self, x, num_chars: int):
