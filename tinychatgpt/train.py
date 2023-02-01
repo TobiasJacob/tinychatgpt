@@ -5,46 +5,20 @@ import torch.nn as nn
 import torch.nn.functional as F
 import matplotlib.pyplot as plt
 
-with open("dataset.txt", "r") as f:
-    dataset = f.readlines()
+import sys
+
+if ".." not in sys.path:
+    sys.path.append("..")
+
+from tinychatgpt.dataset import N_TOKENS, encode, decode, load_dataset
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-device = "cpu"
 #%%
-allCharacters = set("".join(dataset))
-characters = set("\n !(),.0123456789qwertyuioplkjhgfdsazxcvbnmQWWERTYUIOPLKJHGFDSAZXCVBNMäöüÄÖÜß")
-characters.add("Stars: ")
-characters.add("; Review Body: ")
-
-# %%
-stoi = {char: i for i, char in enumerate(characters)}
-itos = {i: char for i, char in enumerate(characters)}
-n_tokens = len(characters)
-
-def encode(text):
-    return [stoi[char] for char in text if char in characters]
-
-def decode(text):
-    return "".join([itos[char] for char in text])
-
-tokenized_dataset = []
-for i, line in enumerate(dataset):
-    # Parse stars
-    stars = line.split("Stars: ")[1].split(";")[0]
-    # Parse review body
-    review = line.split("; Review Body: ")[1]
-
-    tokenized_dataset.append([stoi["Stars: "]] + encode(stars) + [stoi["; Review Body: "]] + encode(review))
-
-# shuffle dataset
-random.shuffle(tokenized_dataset)
-
-tokenized_dataset = [char for line in tokenized_dataset for char in line]
+tokenized_dataset = load_dataset()
 
 # %%
 decode(tokenized_dataset[:1000])
 # %%
-
 train = tokenized_dataset[:int(len(tokenized_dataset) * 0.8)]
 test = tokenized_dataset[int(len(tokenized_dataset) * 0.8):]
 
