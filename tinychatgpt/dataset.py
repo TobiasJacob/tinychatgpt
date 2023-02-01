@@ -16,9 +16,3 @@ with open("dataset.txt", "w") as f:
                 lines
             )
             lines = []
-
-
-# %%
-import tiktoken
-enc = tiktoken.get_encoding("gpt2")
-assert enc.decode(enc.encode("hello world")) == "hello world"
