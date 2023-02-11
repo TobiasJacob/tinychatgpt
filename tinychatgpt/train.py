@@ -6,15 +6,17 @@ import matplotlib.pyplot as plt
 from tqdm import tqdm
 
 import sys
-from tinychatgpt.models.MultiHeadAttentionModel import MultiHeadAttentionModel
-
-from tinychatgpt.models.SelfAttentionModel import SelfAttentionModel
 
 if ".." not in sys.path:
     sys.path.append("..")
 
+from tinychatgpt.models.SelfAttentionModel import SelfAttentionModel
+from tinychatgpt.models.MultiHeadAttentionModel import MultiHeadAttentionModel
 from tinychatgpt.dataset import N_TOKENS, encode, decode, load_dataset
 from tinychatgpt.models.NgramModel import NgramModel
+
+# use SummaryWriter from pytorch to log training
+from torch.utils.tensorboard import SummaryWriter
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 #%%
@@ -42,19 +44,28 @@ get_batch(train, 32, 10)
 
 # Define ngram model
 # train the model
+# seq_len = 13
+# batch_size = 11
+# n_blocks = 7
+# n_heads = 5
+# n_embed = n_heads*3
 seq_len = 128
 batch_size = 64
 n_blocks = 6
 n_embed = 384
-model = MultiHeadAttentionModel(N_TOKENS, n_embed, n_blocks, seq_len, dropout=0.2, n_heads=6)
+n_heads = 6
+
+model = MultiHeadAttentionModel(N_TOKENS, n_embed, n_blocks, seq_len, dropout=0.2, n_heads=n_heads)
 print("Model has {} parameters".format(sum(p.numel() for p in model.parameters())))
 model = model.to(device)
 optimizer = torch.optim.Adam(model.parameters(), lr=2e-4)
-losses_train = []
-losses_test = []
 trains_per_test = 4
+
+writer = SummaryWriter()
 os.makedirs("models", exist_ok=True)
-for i in tqdm(range(5000)):
+
+#%%
+for i in tqdm(range(0, 5000)):
     split = train if i % trains_per_test != 0 else test
     batch = get_batch(split, batch_size, seq_len + 1)
     if split is train:
@@ -63,19 +74,21 @@ for i in tqdm(range(5000)):
         model.eval()
     loss = model(batch[:, :-1], batch[:, 1:])
     if split is train:
-        losses_train.append(loss.item())
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
+        writer.add_scalar("Loss/train", loss.item(), i)
     else:
-        for _ in range(trains_per_test - 1):
-            losses_test.append(loss.item())
+        writer.add_scalar("Loss/eval", loss.item(), i)
     if i % 100 == 1:
-        print(f"Loss train: {losses_train[-1]} Loss test: {losses_test[-1]}")
-        torch.save(model.state_dict(), f"models/model{i}.pt")
-plt.plot(losses_train)
-plt.plot(losses_test)
-plt.show()
+        torch.save(model.state_dict(), f"{writer.log_dir}/model{i}.pt")
+        # generate text and save it
+        batch = get_batch(test, 1, seq_len)
+        model.eval()
+        text = decode(model.generate(batch, 1000).squeeze().tolist())
+        with open(f"{writer.log_dir}/model{i}.txt", "w") as f:
+            f.write(text)
+    
 # %%
 
 # generate text
