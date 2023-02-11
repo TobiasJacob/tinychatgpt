@@ -19,6 +19,7 @@ from tinychatgpt.models.NgramModel import NgramModel
 from torch.utils.tensorboard import SummaryWriter
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
 #%%
 tokenized_dataset = load_dataset()
 
@@ -29,8 +30,8 @@ decode(tokenized_dataset[:1000])
 train = tokenized_dataset[:int(len(tokenized_dataset) * 0.8)]
 test = tokenized_dataset[int(len(tokenized_dataset) * 0.8):]
 
-train = torch.tensor(train, dtype=torch.long).to(device)
-test = torch.tensor(test, dtype=torch.long).to(device)
+train = train.to(device)
+test = test.to(device)
 
 def get_batch(split, batch_size, seq_len):
     start = torch.randint(0, len(split) - seq_len, (batch_size,))
@@ -49,11 +50,11 @@ get_batch(train, 32, 10)
 # n_blocks = 7
 # n_heads = 5
 # n_embed = n_heads*3
-seq_len = 128
+seq_len = 64
 batch_size = 64
 n_blocks = 6
-n_embed = 384
-n_heads = 6
+n_embed = 512
+n_heads = 8
 
 model = MultiHeadAttentionModel(N_TOKENS, n_embed, n_blocks, seq_len, dropout=0.2, n_heads=n_heads)
 print("Model has {} parameters".format(sum(p.numel() for p in model.parameters())))
